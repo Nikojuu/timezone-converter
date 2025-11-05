@@ -117,7 +117,8 @@ const GMT_TIMEZONES = [
 ];
 
 export default function TimezoneConverter() {
-  const [raidTime, setRaidTime] = useState("19:00");
+  const [raidHour, setRaidHour] = useState("19");
+  const [raidMinute, setRaidMinute] = useState("00");
   const [timezoneSystem, setTimezoneSystem] =
     useState<keyof typeof TIMEZONE_SYSTEMS>("UTC");
   const [raidTimezone, setRaidTimezone] = useState("Europe/Paris");
@@ -129,8 +130,17 @@ export default function TimezoneConverter() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Combine hour and minute into time string
+  const raidTime = `${raidHour}:${raidMinute}`;
+
   // Get the active user timezone (either detected or manual)
   const userTimezone = isAutoDetect ? detectedTimezone : manualTimezone;
+
+  // Generate hours array (00-23)
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+
+  // Generate minutes array (00, 15, 30, 45)
+  const minutes = ['00', '15', '30', '45'];
 
   // Auto-detect user's timezone on mount
   useEffect(() => {
@@ -312,20 +322,54 @@ export default function TimezoneConverter() {
         <div className="relative bg-card border-2 border-primary/20 rounded-xl p-8 space-y-6 shadow-lg backdrop-blur-sm">
           {/* Raid Time Input */}
           <div className="space-y-3">
-            <label
-              htmlFor="raid-time"
-              className="flex items-center gap-2 text-sm font-semibold text-foreground"
-            >
+            <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Clock className="h-4 w-4 text-primary" />
               Raid Time
             </label>
-            <input
-              id="raid-time"
-              type="time"
-              value={raidTime}
-              onChange={(e) => setRaidTime(e.target.value)}
-              className="w-full px-5 py-3 text-lg border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200"
-            />
+            <div className="flex gap-3 items-center justify-center">
+              {/* Hour Selector */}
+              <div className="relative flex-1">
+                <select
+                  value={raidHour}
+                  onChange={(e) => setRaidHour(e.target.value)}
+                  className="w-full px-3 py-2 text-xl font-bold text-center border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer appearance-none"
+                >
+                  {hours.map((hour) => (
+                    <option key={hour} value={hour}>
+                      {hour}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="text-2xl font-bold text-primary">:</div>
+
+              {/* Minute Selector */}
+              <div className="relative flex-1">
+                <select
+                  value={raidMinute}
+                  onChange={(e) => setRaidMinute(e.target.value)}
+                  className="w-full px-3 py-2 text-xl font-bold text-center border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer appearance-none"
+                >
+                  {minutes.map((minute) => (
+                    <option key={minute} value={minute}>
+                      {minute}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Raid Timezone System Select */}
@@ -337,24 +381,31 @@ export default function TimezoneConverter() {
               <Globe className="h-4 w-4 text-primary" />
               Timezone System
             </label>
-            <select
-              id="timezone-system"
-              value={timezoneSystem}
-              onChange={(e) => {
-                const newSystem = e.target
-                  .value as keyof typeof TIMEZONE_SYSTEMS;
-                setTimezoneSystem(newSystem);
-                // Set first timezone of the new system as default
-                setRaidTimezone(TIMEZONE_SYSTEMS[newSystem][0].value);
-              }}
-              className="w-full px-5 py-3 text-lg border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer"
-            >
-              <option value="UTC">UTC (Coordinated Universal Time)</option>
-              <option value="GMT">GMT (Greenwich Mean Time)</option>
-              <option value="Regional">
-                Regional Names (PST, CET, JST, etc.)
-              </option>
-            </select>
+            <div className="relative">
+              <select
+                id="timezone-system"
+                value={timezoneSystem}
+                onChange={(e) => {
+                  const newSystem = e.target
+                    .value as keyof typeof TIMEZONE_SYSTEMS;
+                  setTimezoneSystem(newSystem);
+                  // Set first timezone of the new system as default
+                  setRaidTimezone(TIMEZONE_SYSTEMS[newSystem][0].value);
+                }}
+                className="w-full px-4 py-2.5 text-base font-medium border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer appearance-none"
+              >
+                <option value="UTC">UTC (Coordinated Universal Time)</option>
+                <option value="GMT">GMT (Greenwich Mean Time)</option>
+                <option value="Regional">
+                  Regional Names (PST, CET, JST, etc.)
+                </option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           {/* Raid Timezone Offset Select */}
@@ -367,22 +418,29 @@ export default function TimezoneConverter() {
                 <Clock className="h-4 w-4 text-primary" />
                 Raid Timezone Offset
               </label>
-              <div className="text-sm font-mono font-bold text-primary">
+              <div className="px-3 py-1 rounded-full bg-primary/10 text-sm font-mono font-bold text-primary animate-pulse">
                 {formatTimeForTimezone(raidTimezone)}
               </div>
             </div>
-            <select
-              id="raid-timezone"
-              value={raidTimezone}
-              onChange={(e) => setRaidTimezone(e.target.value)}
-              className="w-full px-5 py-3 text-lg border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer"
-            >
-              {TIMEZONE_SYSTEMS[timezoneSystem].map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {timezoneSystem === "Regional" ? tz.label : tz.offset}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                id="raid-timezone"
+                value={raidTimezone}
+                onChange={(e) => setRaidTimezone(e.target.value)}
+                className="w-full px-4 py-2.5 text-base font-medium border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer appearance-none"
+              >
+                {TIMEZONE_SYSTEMS[timezoneSystem].map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {timezoneSystem === "Regional" ? tz.label : tz.offset}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
           </div>
 
           {/* User Timezone Display/Edit */}
@@ -393,7 +451,7 @@ export default function TimezoneConverter() {
                   <MapPin className="h-4 w-4 text-primary" />
                   Your Timezone
                 </label>
-                <div className="text-sm font-mono font-bold text-primary">
+                <div className="px-3 py-1 rounded-full bg-primary/10 text-sm font-mono font-bold text-primary animate-pulse">
                   {formatTimeForTimezone(userTimezone)}
                 </div>
               </div>
@@ -417,24 +475,31 @@ export default function TimezoneConverter() {
               </div>
             </div>
             {isAutoDetect ? (
-              <div className="w-full px-5 py-3 border-2 border-dashed rounded-lg bg-muted/50 text-base font-medium flex items-center justify-between">
+              <div className="w-full px-4 py-2.5 border-2 border-dashed rounded-lg bg-muted/50 text-sm font-medium flex items-center justify-between">
                 <span>{getUserTimezoneDisplay()}</span>
                 <span className="text-xs text-muted-foreground">
                   Browser detected
                 </span>
               </div>
             ) : (
-              <select
-                value={manualTimezone}
-                onChange={(e) => setManualTimezone(e.target.value)}
-                className="w-full px-5 py-3 text-lg border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer"
-              >
-                {GMT_TIMEZONES.map((tz) => (
-                  <option key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={manualTimezone}
+                  onChange={(e) => setManualTimezone(e.target.value)}
+                  className="w-full px-4 py-2.5 text-base font-medium border-2 rounded-lg bg-background hover:border-primary/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 cursor-pointer appearance-none"
+                >
+                  {GMT_TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             )}
           </div>
         </div>
