@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Moon, Sun, Clock, Globe, MapPin, Edit2, Check } from "lucide-react";
+import { Moon, Sun, Clock, Globe, MapPin } from "lucide-react";
 
 // Timezone systems with their offsets
 const TIMEZONE_SYSTEMS = {
@@ -128,7 +128,7 @@ export default function TimezoneConverter() {
   const [convertedTime, setConvertedTime] = useState("");
   const [convertedDate, setConvertedDate] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   // Combine hour and minute into time string
   const raidTime = `${raidHour}:${raidMinute}`;
@@ -144,6 +144,8 @@ export default function TimezoneConverter() {
 
   // Auto-detect user's timezone on mount
   useEffect(() => {
+    setCurrentTime(new Date());
+
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setDetectedTimezone(detected);
 
@@ -174,7 +176,7 @@ export default function TimezoneConverter() {
 
   // Format time for a specific timezone
   const formatTimeForTimezone = (timezone: string) => {
-    if (!timezone) return "--:--:--";
+    if (!timezone || !currentTime) return "--:--:--";
     return currentTime.toLocaleString("en-US", {
       timeZone: timezone,
       hour: "2-digit",
@@ -189,69 +191,50 @@ export default function TimezoneConverter() {
     if (!raidTime || !raidTimezone || !userTimezone) return;
 
     try {
-      // Create a date object for today with the raid time in the raid timezone
-      const now = new Date();
       const [hours, minutes] = raidTime.split(":").map(Number);
+      const now = new Date();
 
-      // Create date string in ISO format for the raid timezone
-      const dateStr = `${now.getFullYear()}-${String(
-        now.getMonth() + 1
-      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(
-        hours
-      ).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00`;
+      // Create a date string for today
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
 
-      // Parse the time in the raid timezone
-      const raidDate = new Date(dateStr);
+      // Start by creating a date assuming the time is in UTC
+      let searchDate = new Date(`${year}-${month}-${day}T${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:00Z`);
 
-      // Get the offset difference
+      // Check what time this shows in the raid timezone
       const raidFormatter = new Intl.DateTimeFormat("en-US", {
         timeZone: raidTimezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       });
 
-      const userFormatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: userTimezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      });
+      // Binary search to find the correct UTC time that displays as our target time in raid timezone
+      // Faster approach: calculate offset directly
 
-      // Create a specific date/time in the raid timezone
-      const testDate = new Date(
-        Date.UTC(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          hours,
-          minutes
-        )
-      );
+      // Get the timezone offset for raid timezone (in minutes)
+      const raidTimeStr = raidFormatter.format(searchDate);
 
-      // Format it in both timezones to see the conversion
-      const raidOffset = getTimezoneOffset(raidTimezone, testDate);
-      const userOffset = getTimezoneOffset(userTimezone, testDate);
+      // Parse it back to compare
+      const [displayHours, displayMinutes] = raidTimeStr.split(":").map(Number);
+      const targetMinutes = hours * 60 + minutes;
+      const displayedMinutes = displayHours * 60 + displayMinutes;
+      const diffMinutes = targetMinutes - displayedMinutes;
 
-      // Calculate the time difference
-      const offsetDiff = userOffset - raidOffset;
-      const convertedDate = new Date(testDate.getTime() + offsetDiff);
+      // Adjust the search date
+      searchDate = new Date(searchDate.getTime() + diffMinutes * 60 * 1000);
 
-      // Format the converted time
-      const timeFormatter = new Intl.DateTimeFormat("en-US", {
+      // Now searchDate is a UTC time that when displayed in raidTimezone shows our target time
+      // Format this UTC time in the user's timezone
+      const userTimeFormatter = new Intl.DateTimeFormat("en-US", {
         timeZone: userTimezone,
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
       });
 
-      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+      const userDateFormatter = new Intl.DateTimeFormat("en-US", {
         timeZone: userTimezone,
         weekday: "short",
         month: "short",
@@ -259,21 +242,14 @@ export default function TimezoneConverter() {
         year: "numeric",
       });
 
-      setConvertedTime(timeFormatter.format(convertedDate));
-      setConvertedDate(dateFormatter.format(convertedDate));
+      setConvertedTime(userTimeFormatter.format(searchDate));
+      setConvertedDate(userDateFormatter.format(searchDate));
     } catch (error) {
       console.error("Error converting timezone:", error);
       setConvertedTime("Error");
       setConvertedDate("");
     }
   }, [raidTime, raidTimezone, userTimezone]);
-
-  // Helper function to get timezone offset in milliseconds
-  function getTimezoneOffset(timeZone: string, date: Date) {
-    const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
-    const tzDate = new Date(date.toLocaleString("en-US", { timeZone }));
-    return utcDate.getTime() - tzDate.getTime();
-  }
 
   // Get timezone display name with offset
   const getUserTimezoneDisplay = () => {
